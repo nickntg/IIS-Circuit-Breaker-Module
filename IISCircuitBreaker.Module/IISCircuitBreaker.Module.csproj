@@ -41,7 +41,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CircuitBreaker.cs" />
+    <Compile Include="CircuitBreakerConfig.cs" />
     <Compile Include="CircuitBreakerHttpModule.cs" />
+    <Compile Include="ICircuitBreaker.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

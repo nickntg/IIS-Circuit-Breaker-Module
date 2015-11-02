@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+VisualStudioVersion = 12.0.30723.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IISCircuitBreaker.Module", "IISCircuitBreaker.Module\IISCircuitBreaker.Module.csproj", "{EB62ED91-23E4-4177-8E34-B279B7546DFF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IISCircuitBreaker.DemoWebSite", "IISCircuitBreaker.DemoWebSite\IISCircuitBreaker.DemoWebSite.csproj", "{F624C80D-800E-4C7E-ADBF-5CC424EBBAC2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IISCircuitBreaker.Module.Tests.Unit", "IISCircuitBreaker.Module.Tests.Unit\IISCircuitBreaker.Module.Tests.Unit.csproj", "{101D781E-758F-4FB6-868E-CF618902F9EA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{F624C80D-800E-4C7E-ADBF-5CC424EBBAC2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F624C80D-800E-4C7E-ADBF-5CC424EBBAC2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F624C80D-800E-4C7E-ADBF-5CC424EBBAC2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{101D781E-758F-4FB6-868E-CF618902F9EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{101D781E-758F-4FB6-868E-CF618902F9EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{101D781E-758F-4FB6-868E-CF618902F9EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{101D781E-758F-4FB6-868E-CF618902F9EA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

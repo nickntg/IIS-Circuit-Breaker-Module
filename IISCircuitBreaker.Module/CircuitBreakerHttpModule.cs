@@ -11,26 +11,21 @@ namespace IISCircuitBreaker.Module
     {
         private static readonly List<string> FilesWatched;
         private static readonly List<string> StatusCodes;
-        private static readonly int ConsecutiveErrorsToBreak;
-        private static readonly int BreakDelayInSeconds;
         private static readonly int StatusCodeWhileBroken;
 
-        private static int CurrentErrors { get; set; }
-
-        private static bool IsBreakerActive { get; set; }
-
-        private static DateTime BreakerActiveUntil { get; set; }
+        private static CircuitBreaker Breaker { get; set; }
  
         static CircuitBreakerHttpModule()
         {
             FilesWatched = ConfigurationManager.AppSettings["IISCircuitBreaker.FilesWatched"].Split(new[] {','}).ToList();
             StatusCodes = ConfigurationManager.AppSettings["IISCircuitBreaker.StatusCodes"].Split(new[] { ',' }).ToList();
-            ConsecutiveErrorsToBreak = Convert.ToInt32(ConfigurationManager.AppSettings["IISCircuitBreaker.ConsecutiveErrorsToBreak"]);
-            BreakDelayInSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["IISCircuitBreaker.BreakDelayInSeconds"]);
             StatusCodeWhileBroken = Convert.ToInt32(ConfigurationManager.AppSettings["IISCircuitBreaker.StatusCodeWhileBroken"]);
-            CurrentErrors = 0;
-            IsBreakerActive = false;
-            BreakerActiveUntil = DateTime.Now;
+
+            Breaker = new CircuitBreaker(new CircuitBreakerConfig
+                {
+                    BreakDelayInSeconds = Convert.ToInt32(ConfigurationManager.AppSettings["IISCircuitBreaker.BreakDelayInSeconds"]),
+                    ConsecutiveErrorsToBreak = Convert.ToInt32(ConfigurationManager.AppSettings["IISCircuitBreaker.ConsecutiveErrorsToBreak"])
+                });
         }
 
         public void Dispose()
@@ -45,76 +40,63 @@ namespace IISCircuitBreaker.Module
 
         private void ApplicationBeginRequest(Object source, EventArgs e)
         {
-            // If the circuit is closed, we've nothing to do.
-            if (!IsBreakerActive)
+            var application = (HttpApplication)source;
+
+            // If we don't care about the file, do nothing.
+            if (IsFileWeWatch(application.Request.CurrentExecutionFilePathExtension))
             {
                 return;
             }
 
-            // Circuit is open. Until when?
-            if (DateTime.Now.CompareTo(BreakerActiveUntil) > 0)
+            // If the circuit is closed, we've nothing to do.
+            if (!Breaker.IsCircuitOpen())
             {
-                // Time to close the circuit again.
-                lock (typeof (CircuitBreakerHttpModule))
-                {
-                    CurrentErrors = 0;
-                    IsBreakerActive = false;
-                    return;
-                }
+                return;
             }
 
             // Circuit is open. Set error and return.
-            var application = (HttpApplication)source;
             var context = application.Context;
             context.Response.StatusCode = StatusCodeWhileBroken;
             context.Response.Write(string.Format(
                     "<h1>Circuit is open</h1>This means that there were {0} consecutive errors. The site now returns {1} and will continue to do so until {2}, then you can try again.",
-                    ConsecutiveErrorsToBreak, StatusCodeWhileBroken, BreakerActiveUntil.ToString("yyyy/MM/dd HH:mm:ss")));
+                    Breaker.Config.ConsecutiveErrorsToBreak, StatusCodeWhileBroken, Breaker.OpenUntil.ToString("yyyy/MM/dd HH:mm:ss")));
         }
 
         private void ApplicationEndRequest(Object source, EventArgs e)
         {
-            /* If the circuit is open, we don't need to do something.
-             * We expect that the circuit will open at beginRequest, however
-             this might mean that some longer-lived request might be served
-             correctly despite the fact that the circuit is open. */
-            if (IsBreakerActive)
+            var application = (HttpApplication)source;
+
+            // If we don't care about the file, do nothing.
+            if (IsFileWeWatch(application.Request.CurrentExecutionFilePathExtension))
             {
                 return;
             }
 
-            var application = (HttpApplication)source;
-
-            /* Is it a file we care about? */
-            if (!FilesWatched.Contains(application.Request.CurrentExecutionFilePathExtension))
+            /* If the circuit is open, we don't need to do something.
+             * We expect that the circuit will open at beginRequest, however
+             this might mean that some longer-lived request might be served
+             correctly despite the fact that the circuit is open. */
+            if (Breaker.IsCircuitOpen())
             {
-                /* If not, process and don't count anything */
                 return;
             }
 
             var context = application.Context;
 
-            /* Is there an error we care about? */
+            // Is there an error we care about?
             if (context.Error == null || !StatusCodes.Contains(context.Response.StatusCode.ToString(CultureInfo.InvariantCulture)))
             {
-                /* No errors that we care about, reset our count and process */
-                lock (typeof(CircuitBreakerHttpModule))
-                {
-                    CurrentErrors = 0;
-                }
+                // No errors that we care about, reset our count and process.
+                Breaker.ClearErrors();
                 return;
             }
 
-            lock (typeof (CircuitBreakerHttpModule))
-            {
-                /* Add error and check whether we need to break the circuit */
-                CurrentErrors++;
-                if (CurrentErrors >= ConsecutiveErrorsToBreak)
-                {
-                    BreakerActiveUntil = DateTime.Now.AddSeconds(BreakDelayInSeconds);
-                    IsBreakerActive = true;
-                }
-            }
+            Breaker.AddError();
+        }
+
+        private bool IsFileWeWatch(string extension)
+        {
+            return !FilesWatched.Contains(extension);
         }
     }
 }
